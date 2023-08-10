@@ -11,7 +11,7 @@ from cms.diagnostics import evaluate_marginal, evaluate_conditional
 
 
 def process_results(
-        results, outfile_prefix, method_name, sketch_name, stream_name, d, w, method, 
+        results, outfile_prefix, method_name, model, sketch_name, stream_name, d, w, method, 
         method_unique, posterior, n_bins, n_track, n, seed, confidence, two_sided):
     
     def add_header(df):
@@ -21,6 +21,7 @@ def process_results(
         df["w"] = w
         df["method"] = method
         df["method-unique"] = method_unique
+        df["model"] = model
         df["posterior"] = posterior
         df["n_bins"] = n_bins
         df["n_track"] = n_track
@@ -32,10 +33,13 @@ def process_results(
     
     confidence_str = str(confidence)
 
+    base_outfile = "results/" + stream_name + "/{0}/" + outfile_prefix + "_" + \
+        method_name + "_" + model + "_" + confidence_str + "_ts" + str(int(two_sided)) + ".txt"
+
     ################
     # Save results #
     ################
-    outfile = "results/" + stream_name + "/detailed/" + outfile_prefix + "_" + method_name + "_" + confidence_str + "_ts" + str(int(two_sided)) + ".txt"
+    outfile = base_outfile.format("detailed")
     dir = os.path.dirname(outfile)
     os.makedirs(dir, exist_ok=True)
     add_header(results).to_csv(outfile, index=False)
@@ -56,7 +60,7 @@ def process_results(
     print()
     sys.stdout.flush()
 
-    outfile = "results/" + stream_name + "/marginal/" + outfile_prefix + "_" + method_name + "_" + confidence_str + "_ts" + str(int(two_sided)) + ".txt"
+    outfile = base_outfile.format("marginal")
     dir = os.path.dirname(outfile)
     os.makedirs(dir, exist_ok=True)
     add_header(summary_marginal).to_csv(outfile, index=False)
@@ -73,7 +77,7 @@ def process_results(
     print()
     sys.stdout.flush()
 
-    outfile = "results/" + stream_name + "/conditional/" + outfile_prefix + "_" + method_name + "_" + confidence_str + "_ts" + str(int(two_sided)) + ".txt"
+    outfile = base_outfile.format("conditional")
     dir = os.path.dirname(outfile)
     os.makedirs(dir, exist_ok=True)
     add_header(summary_conditional).to_csv(outfile, index=False)

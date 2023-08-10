@@ -60,7 +60,7 @@ def run_one(py_theta, py_alpha, method, model, J):
     
     results = worker.run(NDATA, NTEST, seed=SEED)
     outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED)
-    process_results(results, outfile_prefix, method_name, sketch_name, "PYP", M, J, 
+    process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
                     method, False, "mcmc", n_bins, n_track, NDATA, SEED, 0.9, False)
     
 
