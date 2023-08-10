@@ -6,14 +6,6 @@ import pdb
 from itertools import product
 from joblib import Parallel, delayed
 
-import os, sys
-sys.path.append("..")
-
-from cms.data import PYP
-from cms.cms import CMS, BayesianCMS
-from cms.conformal import ConformalCMS
-
-from .experiment_utils import process_results
 
 SEED = 20230810
 
@@ -36,6 +28,16 @@ NJOBS = 16
 
 
 def run_one(py_theta, py_alpha, method, model, J):
+    import os, sys
+    sys.path.append("..")
+
+    from cms.data import PYP
+    from cms.cms import CMS, BayesianCMS
+    from cms.conformal import ConformalCMS
+
+    from .experiment_utils import process_results
+
+
     M = int(max_mem / J)
     stream = PYP(py_theta, py_alpha, SEED)
     cms = CMS(M, J, seed=SEED, conservative=False)
