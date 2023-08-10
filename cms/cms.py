@@ -1,3 +1,4 @@
+import abc
 import random
 import numpy as np
 import pandas as pd
@@ -21,6 +22,10 @@ from cms.data import WordStream, StreamFile, DP, SP
 from cms.utils import sort_dict
 
 from cms.chr import HistogramAccumulator
+
+from julia.api import Julia
+jl = Julia(compiled_modules=False)
+from julia import Main, Sketch
 
 
 def dict_to_list(d):
@@ -184,22 +189,46 @@ class CMS:
             results.append({'x':x, 'count':y_true, 'upper': y_hat})
 
         return pd.DataFrame(results)
+    
 
-class BayesianDP:
+class BNPCMS(abc.ABC):
+
+    @abc.abstractmethod
+    def posterior(self, x, param=None):
+        pass
+
+    @abc.abstractmethod
+    def empirical_bayes(self):
+        pass
+
+    def lower_bound(self, x, confidence, param=None, randomize=False):
+        if param is None:
+            param = self.param
+        pdf = self.posterior(x, param=param)
+        ll = lower_bound_from_cdf(pdf, confidence, randomize=randomize)
+        return ll, pdf
+
+    def prediction_interval(self, x, confidence, param=None, randomize=False):
+        if param is None:
+            param = self.param
+        pdf = self.posterior(x, param=param)
+        pdf = pdf.reshape((1,len(pdf)))
+        breaks = np.arange(pdf.shape[1])
+        CHR = HistogramAccumulator(pdf, breaks, confidence, delta_alpha=0.025)
+        S = CHR.predict_intervals(1.0-confidence)
+        return S.flatten().astype(int)
+    
+    
+
+class BayesianDP(BNPCMS):
     def __init__(self, cms, alpha=None, sigma=None, tau=None):
         self.cms = copy.deepcopy(cms)
         self.C = self.cms.count
-        self.alpha = alpha
-
-        if hasattr(alpha, "__len__"):
-            alpha_list = alpha
-        else:
-            alpha_list = np.array([alpha])
-        self.param_list = alpha_list
+        self.param = alpha
 
     def posterior(self, x, param=None):
         if param is None:
-            param = self.alpha
+            param = self.param
 
         alpha = param
 
@@ -243,23 +272,6 @@ class BayesianDP:
 
         return prob
 
-    def lower_bound(self, x, confidence, param=None, randomize=False):
-        if param is None:
-            param = self.alpha
-        pdf = self.posterior(x, param=param)
-        ll = lower_bound_from_cdf(pdf, confidence, randomize=randomize)
-        return ll, pdf
-
-    def prediction_interval(self, x, confidence, param=None, randomize=False):
-        if param is None:
-            param = self.alpha
-        pdf = self.posterior(x, param=param)
-        pdf = pdf.reshape((1,len(pdf)))
-        breaks = np.arange(pdf.shape[1])
-        CHR = HistogramAccumulator(pdf, breaks, confidence, delta_alpha=0.025)
-        S = CHR.predict_intervals(1.0-confidence)
-        return S.flatten().astype(int)
-
     def _neg_log_likelihood(self, alpha):
         """Compute negative log-likelihood for given α"""
         N = self.C.shape[0]
@@ -284,8 +296,44 @@ class BayesianDP:
         """Estimate α via Empirical Bayes"""
         J = self.C.shape[1]
         opt_sol = optimize.minimize_scalar(self._neg_log_likelihood, method="Bounded", bounds=(0.0001,100*J))
-        self.alpha = opt_sol.x
-        return self.alpha
+        self.param = opt_sol.x
+        return self.param
+    
+
+class SmoothedNGG(BNPCMS):
+
+    def __init__(self,  cms, train_data, rule="min"):
+        self.cms = cms
+        self.train_data = train_data
+        self.rule = rule
+        self.C = self.cms.count
+    
+    def empirical_bayes(self):
+        self.params = Sketch.fit_ngg(self.train_data)
+        self.ngg_intcache = Sketch.beta_integral_ngg(
+            params=self.params, J=self.cms.w)  
+        Main.ngg_p = self.params 
+        Main.ngg_intcache = self.ngg_intcache
+        Main.J = self.cms.w
+        return self.params
+
+
+    def posterior(self, x):
+        columns = self.cms.apply_hash(x)
+        c_js = [self.C[row,columns[row]] for row in range(self.C.shape[0])]
+        Main.c_js = [int(c) for c in c_js]
+        Main.min_c = int(np.min(c_js))
+
+        logprobas = Main.eval(
+            "[Sketch.freq_post!(min_c, c, ngg_p, J, true, ngg_intcache) for c in c_js]")
+        
+        Main.logprobas = logprobas
+        if self.rule == "min":
+            out = Main.eval("Sketch.MIN(logprobas)")
+        else:
+            out = Main.eval("Sketch.PoE(logprobas)")
+        return out
+    
 
 class BayesianCMS:
     def __init__(self, stream, cms, model="DP", alpha=None, sigma=None, tau=None, posterior="mcmc", two_sided=False):
@@ -298,35 +346,41 @@ class BayesianCMS:
 
         self.stream = stream
         self.cms = copy.deepcopy(cms)
-        self.alpha = alpha
+        self.param = alpha
         self.sigma = sigma
         self.tau = tau
         self.model_name = model
         self.posterior = posterior
         self.two_sided = two_sided
 
-    def run(self, n, n_test, confidence=0.9, seed=2021, shift=0):
+    def run(self, n, n_test, confidence=0.9, seed=2021, shift=0, train_perc=0.1):
 
         np.random.seed(seed)
-
         self.cms.reset()
         ## Process stream
         true_frequency = defaultdict(lambda: 0)
         self.stream.reset()
         print("Processing training data....")
         sys.stdout.flush()
+        ntrain = int(n * train_perc)
+        train_data = np.zeros(ntrain)
         for i in tqdm(range(n)):
             x = self.stream.sample()
             self.cms.update_count(x)
+            if i < ntrain:
+                train_data[i] = x
 
         # Initialize Bayesian model
         if self.model_name=="DP":
-            model = BayesianDP(self.cms, alpha=self.alpha)
+            model = BayesianDP(self.cms, alpha=self.param)
 
-            if self.alpha is None:
+            if self.param is None:
                 alpha_hat = model.empirical_bayes()
                 print("Empirical Bayes estimated parameter: {:.3f}".format(alpha_hat))
-
+        
+        elif self.model_name == "NGG":
+            model = SmoothedNGG(self.cms, train_data)
+            params = model.empirical_bayes()
         else:
             print("Error! Unknown model.")
             pdb.set_trace()

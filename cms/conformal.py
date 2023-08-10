@@ -11,7 +11,7 @@ from scipy.stats import norm
 from scipy.stats import t as student_t
 import copy
 
-from cms.cms import BayesianCMS, BayesianDP
+from cms.cms import BayesianCMS, BayesianDP, SmoothedNGG
 from cms.cqr import QR, QRScores
 from cms.utils import sum_dict, dictToList, listToDict
 from cms.chr import HistogramAccumulator
@@ -88,6 +88,7 @@ class ClassicalScoresTwoSided:
 class BayesianScores:
     def __init__(self, model, confidence):
         self.model = model
+        self.cms = copy.deepcopy(model.cms)
         self.confidence = confidence
         self.t_seq = np.linspace(0, 1, 100)
 
@@ -342,11 +343,13 @@ class ConformalCMS:
         #n_track = 0
         n_track = self.max_track
         i_range=tqdm(range(self.max_track))
+        train_data = []
         for i in i_range:
             x = self.stream.sample()
             self.cms_warmup.update_count(x)
             freq_track[x] = 0
             data_track[x] += 1
+            train_data.append(x)
 
         n1 = n - n_track
         print("Main iterations: {:d}...".format(n1))
@@ -368,7 +371,15 @@ class ConformalCMS:
 
             if scorer_type == "Bayesian-DP":
                 model = BayesianDP(self.cms)
-                alpha_hat = model.empirical_bayes()
+                _ = model.empirical_bayes()
+                if self.two_sided:
+                    scorer = BayesianScoresTwoSided(model, 1.0-confidence)
+                else:
+                    scorer = BayesianScores(model, 1.0-confidence)
+
+            elif scorer_type == "Bayesian-NGG":
+                model = SmoothedNGG(self.cms, train_data)
+                _ = model.empirical_bayes()
                 if self.two_sided:
                     scorer = BayesianScoresTwoSided(model, 1.0-confidence)
                 else:

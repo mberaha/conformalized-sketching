@@ -15,10 +15,10 @@ import nltk
 from nltk.util import ngrams
 from nltk.tokenize import sent_tokenize
 tokenizer = nltk.RegexpTokenizer(r"\w+")
-from english_words import english_words_set
+# from english_words import english_words_set
 
-from Bio import SeqIO
-import screed
+# from Bio import SeqIO
+# import screed
 
 import pdb
 
@@ -279,7 +279,7 @@ class WordStream:
         for k in tqdm(range(n_docs)):
             filename = file_list[k]
             data_raw = nltk.corpus.gutenberg.raw(filename)
-            data_ngrams = extract_ngrams(data_raw, n_grams, english_words_set)
+            data_ngrams = extract_ngrams(data_raw, n_grams, [])
             self.data.append(data_ngrams)
         self.data = np.concatenate(self.data)
 
