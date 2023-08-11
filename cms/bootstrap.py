@@ -48,7 +48,7 @@ class BootstrapCMS:
         sys.stdout.flush()
 
         # Process stream
-        for i in tqdm(range(n)):
+        for i in tqdm(range(n), disable=True):
             x = self.stream.sample()
             self.cms.update_count(x)
 
@@ -87,7 +87,7 @@ class BootstrapCMS:
         np.random.seed(seed)
         results = []
         noise = None
-        for i in tqdm(range(n_test)):
+        for i in tqdm(range(n_test), disable=True):
             x = self.stream.sample()
             y = self.cms.true_count[x]
 

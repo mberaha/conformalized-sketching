@@ -342,7 +342,7 @@ class ConformalCMS:
         self.cms_warmup = copy.deepcopy(self.cms)
         #n_track = 0
         n_track = self.max_track
-        i_range=tqdm(range(self.max_track))
+        i_range=tqdm(range(self.max_track), disable=True)
         train_data = []
         for i in i_range:
             x = self.stream.sample()
@@ -355,7 +355,7 @@ class ConformalCMS:
         print("Main iterations: {:d}...".format(n1))
         sys.stdout.flush()
         # Process stream
-        for i in tqdm(range(n1)):
+        for i in tqdm(range(n1), disable=True):
             x = self.stream.sample()
             self.cms.update_count(x)
 
@@ -433,7 +433,7 @@ class ConformalCMS:
                 raise("Error! Unknown type of scores.")
 
             if self.unique > 1:
-                scores_cal_tmp = np.concatenate([[scorer.compute_score(x, freq_track[x])]*data_track[x] for x in tqdm(freq_track.keys())])
+                scores_cal_tmp = np.concatenate([[scorer.compute_score(x, freq_track[x])]*data_track[x] for x in tqdm(freq_track.keys(), disable=True)])
                 y_cal_tmp = np.concatenate([[freq_track[x]]*data_track[x] for x in freq_track.keys()])
                 x_cal_tmp = np.concatenate([[x]*data_track[x] for x in freq_track.keys()])
                 # Split calibration data points into subsets
@@ -451,7 +451,7 @@ class ConformalCMS:
 
             else:
                 # Calculate scores
-                scores_cal = np.concatenate([[scorer.compute_score(x, freq_track[x])]*data_track[x] for x in tqdm(freq_track.keys())])
+                scores_cal = np.concatenate([[scorer.compute_score(x, freq_track[x])]*data_track[x] for x in tqdm(freq_track.keys(), disable=True)])
                 y_cal = np.concatenate([[freq_track[x]]*data_track[x] for x in freq_track.keys()])
 
             # Calibrate the conformity scores (for bin-conditional coverage)
@@ -507,7 +507,7 @@ class ConformalCMS:
         sys.stdout.flush()
         np.random.seed(seed)
         results = []
-        for i in tqdm(range(n_test)):
+        for i in tqdm(range(n_test), disable=True):
             x = self.stream.sample()
             if shift > 0:
                 if np.random.rand() < shift:
