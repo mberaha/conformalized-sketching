@@ -55,7 +55,7 @@ class BootstrapCMS:
         # CMS parameters
         r,w = self.cms.count.shape
 
-        @lru_cache(maxsize=1024)()
+        @lru_cache(maxsize=1024)
         def estimate_noise_dist(x, n_mc = 10000):
             noise = np.zeros((n_mc,))
             i = 0
@@ -68,7 +68,7 @@ class BootstrapCMS:
                     i = i +1
             return noise
 
-        @lru_cache(maxsize=1024)()
+        @lru_cache(maxsize=1024)
         def compute_pdf(x):
             upper = self.cms.estimate_count(x)
             noise = estimate_noise_dist(x).astype(int)
