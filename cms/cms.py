@@ -9,6 +9,7 @@ from functools import lru_cache
 from tqdm import tqdm
 import sys
 import mmh3
+import multiprocessing
 
 from collections import defaultdict, OrderedDict
 from scipy.stats.mstats import mquantiles
@@ -364,7 +365,7 @@ class BayesianCMS:
         sys.stdout.flush()
         ntrain = int(n * train_perc)
         train_data = np.zeros(ntrain)
-        for i in tqdm(range(n)):
+        for i in tqdm(range(n), disable=False):
             x = self.stream.sample()
             self.cms.update_count(x)
             if i < ntrain:
@@ -390,7 +391,7 @@ class BayesianCMS:
         sys.stdout.flush()
         np.random.seed(seed)
         results = []
-        for i in tqdm(range(n_test)):
+        for i in tqdm(range(n_test), disable=False):
             x = self.stream.sample()
             y = self.cms.true_count[x]
 
@@ -430,7 +431,7 @@ class ClassicalCMS:
         ## Process stream
         true_frequency = defaultdict(lambda: 0)
         self.stream.reset()
-        for i in tqdm(range(n)):
+        for i in tqdm(range(n), disable=False):
             x = self.stream.sample()
             self.cms.update_count(x)
 
@@ -438,7 +439,7 @@ class ClassicalCMS:
         print("Evaluating on test data....")
         sys.stdout.flush()
         results = []
-        for i in tqdm(range(n_test)):
+        for i in tqdm(range(n_test), disable=False):
             x = self.stream.sample()
             y = self.cms.true_count[x]
             upper = self.cms.estimate_count(x)

@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,8 +14,8 @@ SEED = 20230810
 Js = [50, 100, 500, 1000]
 max_mem = 1000
 
-PY_ALPHAS = [0.25,0.75]
-PY_THETAS = [10.0, 100.0, 1000.0]
+PY_ALPHAS = [0.25]
+PY_THETAS = [10.0, 100.0]
 NDATA = 250000
 NTRAIN = 25000
 NTEST = 50000
@@ -65,11 +66,18 @@ def run_one(py_theta, py_alpha, method, model, J):
     
 
 if __name__ == "__main__":
-    params = list(product(
-        PY_THETAS, PY_ALPHAS, ["conformal", "bayes"], ["DP", "NGG"], Js))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--method", type=str, default="conformal", choices=["conformal", "bayes"])
+    parser.add_argument("--model", type=str, default="NGG", choices=["NGG", "DP"])
+    parser.add_argument("--J", type=int, default=100)
     
-    
-    Parallel(n_jobs=NJOBS)(delayed(run_one)(*p) for p in params)
+    args = parser.parse_args()
+
+    for theta in PY_THETAS:
+        for alpha in PY_ALPHAS:
+                print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}".format(
+                     theta, alpha, args.J, args.method, args.model))
+                run_one(theta, alpha, args.method, args.model, args.J)
 
     
 
