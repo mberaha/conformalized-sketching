@@ -203,15 +203,16 @@ class BNPCMS(abc.ABC):
         pass
 
     def lower_bound(self, x, confidence, param=None, randomize=False):
-        if param is None:
-            param = self.param
-        pdf = self.posterior(x, param=param)
+        if param is None:   
+            pdf = self.posterior(x)
+        else:
+            pdf = self.posterior(x, param=param)
         ll = lower_bound_from_cdf(pdf, confidence, randomize=randomize)
         return ll, pdf
 
     def prediction_interval(self, x, confidence, param=None, randomize=False):
         if param is None:
-            param = self.param
+            param = self.params
         pdf = self.posterior(x, param=param)
         pdf = pdf.reshape((1,len(pdf)))
         breaks = np.arange(pdf.shape[1])
@@ -225,11 +226,11 @@ class BayesianDP(BNPCMS):
     def __init__(self, cms, alpha=None, sigma=None, tau=None):
         self.cms = copy.deepcopy(cms)
         self.C = self.cms.count
-        self.param = alpha
+        self.params = alpha
 
     def posterior(self, x, param=None):
         if param is None:
-            param = self.param
+            param = self.params
 
         alpha = param
 
@@ -297,8 +298,8 @@ class BayesianDP(BNPCMS):
         """Estimate α via Empirical Bayes"""
         J = self.C.shape[1]
         opt_sol = optimize.minimize_scalar(self._neg_log_likelihood, method="Bounded", bounds=(0.0001,100*J))
-        self.param = opt_sol.x
-        return self.param
+        self.params = opt_sol.x
+        return self.params
     
 
 class SmoothedNGG(BNPCMS):
@@ -319,7 +320,14 @@ class SmoothedNGG(BNPCMS):
         return self.params
 
 
-    def posterior(self, x):
+    def posterior(self, x, param=None):
+        if (param is not None) and (param != self.params):
+            self.params = param
+            self.ngg_intcache = Sketch.beta_integral_ngg(
+                params=self.params, J=self.cms.w)  
+            Main.ngg_p = self.params 
+            Main.ngg_intcache = self.ngg_intcache
+
         columns = self.cms.apply_hash(x)
         c_js = [self.C[row,columns[row]] for row in range(self.C.shape[0])]
         Main.c_js = [int(c) for c in c_js]
@@ -347,7 +355,7 @@ class BayesianCMS:
 
         self.stream = stream
         self.cms = copy.deepcopy(cms)
-        self.param = alpha
+        self.params = alpha
         self.sigma = sigma
         self.tau = tau
         self.model_name = model
@@ -373,9 +381,9 @@ class BayesianCMS:
 
         # Initialize Bayesian model
         if self.model_name=="DP":
-            model = BayesianDP(self.cms, alpha=self.param)
+            model = BayesianDP(self.cms, alpha=self.params)
 
-            if self.param is None:
+            if self.params is None:
                 alpha_hat = model.empirical_bayes()
                 print("Empirical Bayes estimated parameter: {:.3f}".format(alpha_hat))
         
