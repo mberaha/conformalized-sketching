@@ -210,10 +210,8 @@ class BNPCMS(abc.ABC):
         ll = lower_bound_from_cdf(pdf, confidence, randomize=randomize)
         return ll, pdf
 
-    def prediction_interval(self, x, confidence, param=None, randomize=False):
-        if param is None:
-            param = self.params
-        pdf = self.posterior(x, param=param)
+    def prediction_interval(self, x, confidence, randomize=False):
+        pdf = self.posterior(x)
         pdf = pdf.reshape((1,len(pdf)))
         breaks = np.arange(pdf.shape[1])
         CHR = HistogramAccumulator(pdf, breaks, confidence, delta_alpha=0.025)
@@ -228,11 +226,9 @@ class BayesianDP(BNPCMS):
         self.C = self.cms.count
         self.params = alpha
 
-    def posterior(self, x, param=None):
-        if param is None:
-            param = self.params
-
-        alpha = param
+    @lru_cache(maxsize=1024)
+    def posterior(self, x):
+        alpha = self.params
 
         N = self.C.shape[0]
         J = self.C.shape[1]
@@ -319,15 +315,8 @@ class SmoothedNGG(BNPCMS):
         Main.J = self.cms.w
         return self.params
 
-
-    def posterior(self, x, param=None):
-        if (param is not None) and (param != self.params):
-            self.params = param
-            self.ngg_intcache = Sketch.beta_integral_ngg(
-                params=self.params, J=self.cms.w)  
-            Main.ngg_p = self.params 
-            Main.ngg_intcache = self.ngg_intcache
-
+    @lru_cache(maxsize=1024)
+    def posterior(self, x):
         columns = self.cms.apply_hash(x)
         c_js = [self.C[row,columns[row]] for row in range(self.C.shape[0])]
         Main.c_js = [int(c) for c in c_js]
