@@ -50,7 +50,7 @@ def run_one(py_theta, py_alpha, method, model, J, rule):
         worker = ConformalCMS(stream, cms,
                             n_track = NTRAIN,
                             unique = 0,
-                            n_bins = 1,
+                            n_bins = 5,
                             scorer_type = "Bayesian-" + model, agg_rule=rule)
         method_name = method + "_" + rule
 
