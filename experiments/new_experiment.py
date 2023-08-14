@@ -22,10 +22,10 @@ NTEST = 50000
 NJOBS = 16
 
 
-NDATA = 2500
-NTRAIN = 250
-NTEST = 500
-NJOBS = 4
+# NDATA = 2500
+# NTRAIN = 250
+# NTEST = 500
+# NJOBS = 4
 
 
 def run_one(py_theta, py_alpha, method, model, J, rule):
