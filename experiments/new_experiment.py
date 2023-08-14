@@ -22,13 +22,13 @@ NTEST = 50000
 NJOBS = 16
 
 
-# NDATA = 2500
-# NTRAIN = 250
-# NTEST = 500
-# NJOBS = 4
+NDATA = 2500
+NTRAIN = 250
+NTEST = 500
+NJOBS = 4
 
 
-def run_one(py_theta, py_alpha, method, model, J):
+def run_one(py_theta, py_alpha, method, model, J, rule):
     import os, sys
     sys.path.append("..")
 
@@ -51,12 +51,12 @@ def run_one(py_theta, py_alpha, method, model, J):
                             n_track = NTRAIN,
                             unique = 0,
                             n_bins = 1,
-                            scorer_type = "Bayesian-" + model)
-        method_name = method + "_unique" + str(int(method_unique)) + "_bins" + str(n_bins) + "_track" + str(n_track)
+                            scorer_type = "Bayesian-" + model, agg_rule=rule)
+        method_name = method + "_" + rule
 
     else:
-        worker = BayesianCMS(stream, cms, model=model)
-        method_name = method + "_unique" + str(int(method_unique)) + "_bins" + str(n_bins) + "_track" + str(n_track)
+        worker = BayesianCMS(stream, cms, model=model, agg_rule=rule)
+        method_name = method + "_" + rule
 
     
     results = worker.run(NDATA, NTEST, seed=SEED)
@@ -67,19 +67,17 @@ def run_one(py_theta, py_alpha, method, model, J):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--method", type=str, default="conformal", choices=["conformal", "bayes"])
-    parser.add_argument("--model", type=str, default="NGG", choices=["NGG", "DP"])
+    # parser.add_argument("--method", type=str, default="conformal", choices=["conformal", "bayes"])
+    # parser.add_argument("--model", type=str, default="NGG", choices=["NGG", "DP"])
     parser.add_argument("--J", type=int, default=100)
     
     args = parser.parse_args()
 
     for theta in PY_THETAS:
         for alpha in PY_ALPHAS:
-                print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}".format(
-                     theta, alpha, args.J, args.method, args.model))
-                run_one(theta, alpha, args.method, args.model, args.J)
-
-    
-
-    
-
+                for method in ["bayes", "conformal"]:
+                     for model in ["DP", "NGG"]:
+                        for rule in ["PoE", "min"]:
+                            print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}".format(
+                                theta, alpha, args.J, method, model, rule))
+                            run_one(theta, alpha, method, model, args.J, rule)

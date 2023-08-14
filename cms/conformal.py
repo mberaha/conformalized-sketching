@@ -302,7 +302,7 @@ class BootstrapScoresTwoSidedCHR:
 
 
 class ConformalCMS:
-    def __init__(self, stream, cms, n_track, prop_train=0.5, n_bins=1, scorer_type="Bayesian-DP", two_sided=False, unique=1):
+    def __init__(self, stream, cms, n_track, prop_train=0.5, n_bins=1, scorer_type="Bayesian-DP", two_sided=False, unique=1, agg_rule="PoE"):
         self.stream = stream
         self.cms = cms
         self.max_track = n_track
@@ -311,6 +311,7 @@ class ConformalCMS:
         self.scorer_type = scorer_type
         self.unique = unique
         self.two_sided = two_sided
+        self.agg_rule = agg_rule
 
     @lru_cache(maxsize=1024)
     def _predict_interval(self, x, scorer=None, t_hat_low=None, t_hat_upp=None):
@@ -370,7 +371,7 @@ class ConformalCMS:
             J = self.cms.w
 
             if scorer_type == "Bayesian-DP":
-                model = BayesianDP(self.cms)
+                model = BayesianDP(self.cms, agg_rule=self.agg_rule)
                 _ = model.empirical_bayes()
                 if self.two_sided:
                     scorer = BayesianScoresTwoSided(model, 1.0-confidence)
@@ -378,7 +379,7 @@ class ConformalCMS:
                     scorer = BayesianScores(model, 1.0-confidence)
 
             elif scorer_type == "Bayesian-NGG":
-                model = SmoothedNGG(self.cms, train_data)
+                model = SmoothedNGG(self.cms, train_data, agg_rule=self.agg_rule)
                 _ = model.empirical_bayes()
                 if self.two_sided:
                     scorer = BayesianScoresTwoSided(model, 1.0-confidence)

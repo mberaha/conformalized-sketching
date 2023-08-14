@@ -14,7 +14,7 @@ import multiprocessing
 from collections import defaultdict, OrderedDict
 from scipy.stats.mstats import mquantiles
 from scipy.special import comb
-from scipy.special import loggamma
+from scipy.special import loggamma, softmax
 from scipy import optimize
 from scipy import stats
 from sklearn import mixture
@@ -221,10 +221,11 @@ class BNPCMS(abc.ABC):
     
 
 class BayesianDP(BNPCMS):
-    def __init__(self, cms, alpha=None, sigma=None, tau=None):
+    def __init__(self, cms, alpha=None, sigma=None, tau=None, agg_rule="PoE"):
         self.cms = copy.deepcopy(cms)
         self.C = self.cms.count
         self.params = alpha
+        self.rule = agg_rule
 
     @lru_cache(maxsize=1024)
     def posterior(self, x):
@@ -250,19 +251,24 @@ class BayesianDP(BNPCMS):
             N = self.C.shape[0]
             K = np.min(c_v)
 
-            log_v = np.zeros((K+1,))
+            logprobas = np.zeros((N, K+1))
+            # log_v = np.zeros((K+1,))
             for n in range(N):
-                log_v += _log_pmf_c_k(J, c_v[n], K)
+                logprobas[n] += _log_pmf_c_k(J, c_v[n], K)
 
-            if N>1:
-                 tmp = _log_pmf_c_k(1, m, K)
-                 log_v += (1.0-N) * tmp
+            # if N>1:
+            #      tmp = _log_pmf_c_k(1, m, K)
+            #      log_v += (1.0-N) * tmp
 
-            prob = np.exp(log_v - np.max(log_v))
-            prob /= np.sum(prob)
-
+            if self.rule == "PoE":
+                prob = np.prod(softmax(logprobas, axis=1), axis=0)
+                prob = prob / np.sum(prob)
+            else:
+                probas = softmax(logprobas, axis=1)
+                cdfs = np.cumsum(probas, axis=1)
+                cdf = 1.0 - np.prod(1.0 - cdfs, axis=1)
+                prob = np.concatenate([[cdf[0]], np.diff(cdf)])
             return prob
-
 
         columns = self.cms.apply_hash(x)
         c_v = [self.C[row,columns[row]] for row in range(self.C.shape[0])]
@@ -334,7 +340,7 @@ class SmoothedNGG(BNPCMS):
     
 
 class BayesianCMS:
-    def __init__(self, stream, cms, model="DP", alpha=None, sigma=None, tau=None, posterior="mcmc", two_sided=False):
+    def __init__(self, stream, cms, model="DP", alpha=None, sigma=None, tau=None, posterior="mcmc", two_sided=False, agg_rule="PoE"):
         if alpha is not None:
             assert (alpha>0)
         if sigma is not None:
@@ -350,6 +356,7 @@ class BayesianCMS:
         self.model_name = model
         self.posterior = posterior
         self.two_sided = two_sided
+        self.agg_rule = agg_rule
 
     def run(self, n, n_test, confidence=0.9, seed=2021, shift=0, train_perc=0.1):
 
@@ -370,14 +377,14 @@ class BayesianCMS:
 
         # Initialize Bayesian model
         if self.model_name=="DP":
-            model = BayesianDP(self.cms, alpha=self.params)
+            model = BayesianDP(self.cms, alpha=self.params, rule=self.agg_rule)
 
             if self.params is None:
                 alpha_hat = model.empirical_bayes()
                 print("Empirical Bayes estimated parameter: {:.3f}".format(alpha_hat))
         
         elif self.model_name == "NGG":
-            model = SmoothedNGG(self.cms, train_data)
+            model = SmoothedNGG(self.cms, train_data, rule=self.agg_rule)
             params = model.empirical_bayes()
         else:
             print("Error! Unknown model.")
