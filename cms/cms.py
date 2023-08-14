@@ -221,11 +221,11 @@ class BNPCMS(abc.ABC):
     
 
 class BayesianDP(BNPCMS):
-    def __init__(self, cms, alpha=None, sigma=None, tau=None, rule="PoE"):
+    def __init__(self, cms, alpha=None, sigma=None, tau=None, agg_rule="PoE"):
         self.cms = copy.deepcopy(cms)
         self.C = self.cms.count
         self.params = alpha
-        self.rule = rule
+        self.rule = agg_rule
 
     @lru_cache(maxsize=1024)
     def posterior(self, x):
@@ -306,10 +306,10 @@ class BayesianDP(BNPCMS):
 
 class SmoothedNGG(BNPCMS):
 
-    def __init__(self,  cms, train_data, rule="min"):
+    def __init__(self,  cms, train_data, agg_rule="min"):
         self.cms = cms
         self.train_data = train_data
-        self.rule = rule
+        self.rule = agg_rule
         self.C = self.cms.count
     
     def empirical_bayes(self):
@@ -377,14 +377,14 @@ class BayesianCMS:
 
         # Initialize Bayesian model
         if self.model_name=="DP":
-            model = BayesianDP(self.cms, alpha=self.params, rule=self.agg_rule)
+            model = BayesianDP(self.cms, alpha=self.params, agg_rule=self.agg_rule)
 
             if self.params is None:
                 alpha_hat = model.empirical_bayes()
                 print("Empirical Bayes estimated parameter: {:.3f}".format(alpha_hat))
         
         elif self.model_name == "NGG":
-            model = SmoothedNGG(self.cms, train_data, rule=self.agg_rule)
+            model = SmoothedNGG(self.cms, train_data, agg_rule=self.agg_rule)
             params = model.empirical_bayes()
         else:
             print("Error! Unknown model.")
