@@ -221,11 +221,11 @@ class BNPCMS(abc.ABC):
     
 
 class BayesianDP(BNPCMS):
-    def __init__(self, cms, alpha=None, sigma=None, tau=None, agg_rule="PoE"):
+    def __init__(self, cms, alpha=None, sigma=None, tau=None, rule="PoE"):
         self.cms = copy.deepcopy(cms)
         self.C = self.cms.count
         self.params = alpha
-        self.rule = agg_rule
+        self.rule = rule
 
     @lru_cache(maxsize=1024)
     def posterior(self, x):
