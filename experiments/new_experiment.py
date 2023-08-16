@@ -67,17 +67,22 @@ def run_one(py_theta, py_alpha, method, model, J, rule):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    # parser.add_argument("--method", type=str, default="conformal", choices=["conformal", "bayes"])
-    # parser.add_argument("--model", type=str, default="NGG", choices=["NGG", "DP"])
+    parser.add_argument("--method", type=str, default=None, choices=["conformal", "bayes", None])
+    parser.add_argument("--model", type=str, default=None, choices=["NGG", "DP", None])
+    parser.add_argument("--model", type=str, default=None, choices=["PoE", "min", None])
     parser.add_argument("--J", type=int, default=100)
     
     args = parser.parse_args()
 
+    methods = [args.method] if args.method else ["bayes", "conformal"]
+    models = [args.model] if args.model else ["DP", "NGG"]
+    rules = [args.rule] if args.rule else ["PoE", "min"]
+
     for theta in PY_THETAS:
         for alpha in PY_ALPHAS:
-                for method in ["bayes", "conformal"]:
-                     for model in ["DP", "NGG"]:
-                        for rule in ["PoE", "min"]:
+                for method in methods:
+                     for model in models:
+                        for rule in rules:
                             print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}".format(
                                 theta, alpha, args.J, method, model, rule))
                             run_one(theta, alpha, method, model, args.J, rule)
