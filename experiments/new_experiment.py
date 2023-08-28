@@ -19,7 +19,7 @@ PY_THETAS = [10.0, 100.0]
 NDATA = 250000
 NTRAIN = 25000
 NTEST = 500
-NREP = 50
+NREP = 20
 
 NJOBS = 16
 
@@ -89,6 +89,6 @@ if __name__ == "__main__":
                      for model in models:
                         for rule in rules:
                             for j in range(NREP):
-                                print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}".format(
-                                    theta, alpha, args.J, method, model, rule))
-                                run_one(theta, alpha, method, model, args.J, rule)
+                                print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}, REP: {6}".format(
+                                    theta, alpha, args.J, method, model, rule, j))
+                                run_one(theta, alpha, method, model, args.J, rule, j)
