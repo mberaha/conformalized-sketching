@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", type=str, default=None, choices=["conformal", "bayes", None])
     parser.add_argument("--model", type=str, default=None, choices=["NGG", "DP", None])
-    parser.add_argument("--model", type=str, default=None, choices=["PoE", "min", None])
+    parser.add_argument("--rule", type=str, default=None, choices=["PoE", "min", None])
     parser.add_argument("--J", type=int, default=100)
     
     args = parser.parse_args()
