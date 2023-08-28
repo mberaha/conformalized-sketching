@@ -18,7 +18,9 @@ PY_ALPHAS = [0.25]
 PY_THETAS = [10.0, 100.0]
 NDATA = 250000
 NTRAIN = 25000
-NTEST = 50000
+NTEST = 500
+NREP = 50
+
 NJOBS = 16
 
 
@@ -27,8 +29,10 @@ NJOBS = 16
 # NTEST = 500
 # NJOBS = 4
 
+np.random.seed(SEED)
 
-def run_one(py_theta, py_alpha, method, model, J, rule):
+
+def run_one(py_theta, py_alpha, method, model, J, rule, repnum):
     import os, sys
     sys.path.append("..")
 
@@ -40,8 +44,9 @@ def run_one(py_theta, py_alpha, method, model, J, rule):
 
 
     M = int(max_mem / J)
-    stream = PYP(py_theta, py_alpha, SEED)
-    cms = CMS(M, J, seed=SEED, conservative=False)
+    rep_seed = np.random.randint()
+    stream = PYP(py_theta, py_alpha, rep_seed)
+    cms = CMS(M, J, seed=rep_seed, conservative=False)
     method_unique = 0
     n_bins = 1
     n_track = NTRAIN
@@ -60,7 +65,7 @@ def run_one(py_theta, py_alpha, method, model, J, rule):
 
     
     results = worker.run(NDATA, NTEST, seed=SEED)
-    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED)
+    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED) + "_repnum" + str(repnum)
     process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
                     method, False, "mcmc", n_bins, n_track, NDATA, SEED, 0.9, False)
     
@@ -83,6 +88,7 @@ if __name__ == "__main__":
                 for method in methods:
                      for model in models:
                         for rule in rules:
-                            print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}".format(
-                                theta, alpha, args.J, method, model, rule))
-                            run_one(theta, alpha, method, model, args.J, rule)
+                            for j in range(NREP):
+                                print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}".format(
+                                    theta, alpha, args.J, method, model, rule))
+                                run_one(theta, alpha, method, model, args.J, rule)
