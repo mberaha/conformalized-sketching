@@ -109,7 +109,7 @@ class BayesianScores:
         lower_seq[lower_seq<0] = 0
         return lower_seq
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def compute_score(self, x, y):
         lower = self._compute_sequence(x)
         idx_below = np.where(lower <= y)[0]
@@ -143,7 +143,7 @@ class BayesianScoresTwoSided:
             lower = 0
         return lower
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def compute_score(self, x, y):
         pdf = self.model.posterior(x)
         pdf = pdf.reshape((1,len(pdf)))
@@ -165,7 +165,7 @@ class BootstrapScores:
         self.cms = copy.deepcopy(cms)
         self.alpha = alpha
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def estimate_noise_dist(self, x, n_mc = 1000):
         r,w = self.cms.count.shape
         noise = np.zeros((n_mc,))
@@ -179,7 +179,7 @@ class BootstrapScores:
                 i = i +1
         return noise
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def compute_score(self, x, y):
         "This score measures by how much we need to decrease the upper bound to obtain a valid lower bound"
         upper_max = self.cms.estimate_count(x)
@@ -189,7 +189,7 @@ class BootstrapScores:
         score_low = lower-y
         return score_low, 0
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def predict_interval(self, x, tau_l, tau_u):
         upper_max = self.cms.estimate_count(x)
         noise = self.estimate_noise_dist(x)
@@ -206,7 +206,7 @@ class BootstrapScoresTwoSided:
         self.n_mc = n_mc
         self.alpha = alpha
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def estimate_noise_dist(self, x, n_mc = 1000):
         r,w = self.cms.count.shape
         noise = np.zeros((n_mc,))
@@ -220,7 +220,7 @@ class BootstrapScoresTwoSided:
                 i = i +1
         return noise
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def compute_score(self, x, y):
         "This score measures by how much we need to decrease the upper bound to obtain a valid lower bound"
         upper_max = self.cms.estimate_count(x)
@@ -233,7 +233,7 @@ class BootstrapScoresTwoSided:
         score_upp = y-upper
         return score_low, score_upp
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def predict_interval(self, x, tau_l, tau_u):
         upper_max = self.cms.estimate_count(x)
         noise = self.estimate_noise_dist(x)
@@ -253,7 +253,7 @@ class BootstrapScoresTwoSidedCHR:
         self.n_mc = n_mc
         self.t_seq = np.linspace(0, 1, 100)
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def _estimate_noise_dist(self, x):
         # CMS parameters
         r,w = self.cms.count.shape
@@ -269,27 +269,27 @@ class BootstrapScoresTwoSidedCHR:
                 i = i +1
         return noise
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def estimate_median(self, x):
         upper = self.cms.estimate_count(x)
         noise = self._estimate_noise_dist(x).astype(int)
         vals = np.maximum(upper - noise, 0)
         return np.median(vals)
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def estimate_quantiles(self, x):
         upper = self.cms.estimate_count(x)
         noise = self._estimate_noise_dist(x).astype(int)
         vals = np.maximum(upper - noise, 0)
         return mquantiles(vals, [self.alpha, 1.0-self.alpha])
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def compute_score(self, x, y):
         lower, upper = self.estimate_quantiles(x)
         score = np.maximum(lower-y, y-upper)
         return score, 0
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def predict_interval(self, x, t_l, t_u):
         upper_max = self.cms.estimate_count(x)
         lower, upper = self.estimate_quantiles(x)
@@ -313,7 +313,7 @@ class ConformalCMS:
         self.two_sided = two_sided
         self.agg_rule = agg_rule
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def _predict_interval(self, x, scorer=None, t_hat_low=None, t_hat_upp=None):
         lower_warmup = self.cms_warmup.true_count[x]
         if scorer is not None:

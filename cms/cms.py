@@ -227,7 +227,7 @@ class BayesianDP(BNPCMS):
         self.params = alpha
         self.rule = agg_rule
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def posterior(self, x):
         alpha = self.params
 
@@ -321,7 +321,7 @@ class SmoothedNGG(BNPCMS):
         Main.J = self.cms.w
         return self.params
 
-    @lru_cache(maxsize=1024)
+    @lru_cache(maxsize=2048)
     def posterior(self, x):
         columns = self.cms.apply_hash(x)
         c_js = [self.C[row,columns[row]] for row in range(self.C.shape[0])]
