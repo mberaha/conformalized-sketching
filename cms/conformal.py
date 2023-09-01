@@ -334,6 +334,7 @@ class ConformalCMS:
             raise RuntimeError("chane_rule can be called only after run")
         
         self.model.rule = new_rule
+        self._predict_interval.cache_clear()
 
     def warmup(self):
         ## Warmup
@@ -371,18 +372,10 @@ class ConformalCMS:
         if scorer_type == "Bayesian-DP":
             self.model = BayesianDP(self.cms, agg_rule=self.agg_rule)
             _ = self.model.empirical_bayes()
-            if self.two_sided:
-                self.scorer = BayesianScoresTwoSided(self.model, 1.0-confidence)
-            else:
-                self.scorer = BayesianScores(self.model, 1.0-confidence)
 
         elif scorer_type == "Bayesian-NGG":
             self.model = SmoothedNGG(self.cms, self.train_data, agg_rule=self.agg_rule)
             _ = self.model.empirical_bayes()
-            if self.two_sided:
-                self.scorer = BayesianScoresTwoSided(self.model, 1.0-confidence)
-            else:
-                self.scorer = BayesianScores(self.model, 1.0-confidence)
 
     def run(self, n, n_test, confidence=0.9, seed=2021, heavy_hitters_gamma=0.01, shift=0, 
             reuse_stream=False, reuse_model=False):
@@ -399,6 +392,12 @@ class ConformalCMS:
 
         if not reuse_model:
             self.create_and_fit_model(confidence)
+
+        self.scorer = None
+        if self.two_sided:
+            self.scorer = BayesianScoresTwoSided(self.model, 1.0-confidence)
+        else:
+            self.scorer = BayesianScores(self.model, 1.0-confidence)
         
         freq_track = self.freq_track
         data_track = self.data_track
