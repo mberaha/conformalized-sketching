@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pdb
 import copy
-from functools import lru_cache
+from methodtools import lru_cache
 from tqdm import tqdm
 import sys
 import mmh3

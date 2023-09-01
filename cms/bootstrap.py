@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 
 import pdb
 
-from functools import lru_cache
+from methodtools import lru_cache
 
 def common_member(a, b):
     a_set = set(a)

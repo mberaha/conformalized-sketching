@@ -26,7 +26,7 @@ from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 
-from functools import lru_cache
+from methodtools import lru_cache
 
 def common_member(a, b):
     a_set = set(a)
