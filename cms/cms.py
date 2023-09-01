@@ -322,7 +322,7 @@ class SmoothedNGG(BNPCMS):
         return self.params
 
     @lru_cache(maxsize=2048)
-    def posterior(self, x):
+    def get_posteriors(self, x):
         columns = self.cms.apply_hash(x)
         c_js = [self.C[row,columns[row]] for row in range(self.C.shape[0])]
         Main.c_js = [int(c) for c in c_js]
@@ -330,12 +330,14 @@ class SmoothedNGG(BNPCMS):
 
         logprobas = Main.eval(
             "[Sketch.freq_post!(min_c, c, ngg_p, J, true, ngg_intcache) for c in c_js]")
-        
-        Main.logprobas = logprobas
+        return logprobas
+
+    def posterior(self, x):  
+        logprobas = self.get_posteriors(x)
         if self.rule == "min":
-            out = Main.eval("Sketch.MIN(logprobas)")
+            out = Sketch.MIN(logprobas)
         else:
-            out = Main.eval("Sketch.PoE(logprobas)")
+            out = Sketch.PoE(logprobas)
         return out
     
 
@@ -358,7 +360,7 @@ class BayesianCMS:
         self.two_sided = two_sided
         self.agg_rule = agg_rule
 
-    def run(self, n, n_test, confidence=0.9, seed=2021, shift=0, train_perc=0.1):
+    def run(self, n, n_test, confidence=0.9, seed=2021, shift=0, train_perc=0.1, fitted_model=None):
 
         np.random.seed(seed)
         self.cms.reset()
@@ -375,20 +377,22 @@ class BayesianCMS:
             if i < ntrain:
                 train_data[i] = x
 
-        # Initialize Bayesian model
-        if self.model_name=="DP":
-            model = BayesianDP(self.cms, alpha=self.params, agg_rule=self.agg_rule)
-
-            if self.params is None:
+        if fitted_model is None:
+            # Initialize Bayesian model
+            if self.model_name=="DP":
+                model = BayesianDP(self.cms, alpha=self.params, agg_rule=self.agg_rule)
                 alpha_hat = model.empirical_bayes()
                 print("Empirical Bayes estimated parameter: {:.3f}".format(alpha_hat))
-        
-        elif self.model_name == "NGG":
-            model = SmoothedNGG(self.cms, train_data, agg_rule=self.agg_rule)
-            params = model.empirical_bayes()
+            
+            elif self.model_name == "NGG":
+                model = SmoothedNGG(self.cms, train_data, agg_rule=self.agg_rule)
+                params = model.empirical_bayes()
+
+            else:
+                print("Error! Unknown model.")
+                pdb.set_trace()
         else:
-            print("Error! Unknown model.")
-            pdb.set_trace()
+            model = fitted_model
 
         # Evaluate
         print("Evaluating on test data....")
