@@ -65,7 +65,7 @@ def run_one(py_theta, py_alpha, J, repnum):
         agg_rule="PoE")
     method_name = method + "_" + rule
     results = conf_worker.run(NDATA, NTEST, seed=rep_seed)
-    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED) + "_repnum" + str(repnum)
+    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_repnum" + str(repnum)
     process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
                     method, False, "mcmc", n_bins, n_track, NDATA, rep_seed, 0.9, False)
 
@@ -78,7 +78,7 @@ def run_one(py_theta, py_alpha, J, repnum):
     bayes_worker = BayesianCMS(stream, cms, model="ngg", agg_rule="poe")
     method_name = method + "_" + rule
     bayes_worker.run(NDATA, NTEST, seed=rep_seed, fitted_model=nggpoefit)
-    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED) + "_repnum" + str(repnum)
+    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_repnum" + str(repnum)
     process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
                     method, False, "mcmc", n_bins, n_track, NDATA, rep_seed, 0.9, False)
 
@@ -91,7 +91,7 @@ def run_one(py_theta, py_alpha, J, repnum):
     method_name = method + "_" + rule
     results = conf_worker.run(NDATA, NTEST, seed=rep_seed, 
                          reuse_stream=True, reuse_model=True)
-    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED) + "_repnum" + str(repnum)
+    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_repnum" + str(repnum)
     process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
                     method, False, "mcmc", n_bins, n_track, NDATA, rep_seed, 0.9, False)
     
@@ -104,7 +104,7 @@ def run_one(py_theta, py_alpha, J, repnum):
     bayes_worker = BayesianCMS(stream, cms, model="ngg", agg_rule="min")
     method_name = method + "_" + rule
     bayes_worker.run(NDATA, NTEST, seed=rep_seed, fitted_model=nggminfit)
-    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED) + "_repnum" + str(repnum)
+    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_repnum" + str(repnum)
     process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
                     method, False, "mcmc", n_bins, n_track, NDATA, SEED, 0.9, False)
 
