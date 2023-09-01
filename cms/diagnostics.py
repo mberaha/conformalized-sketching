@@ -42,11 +42,11 @@ def evaluate_conditional(results, nbins=5, include_seen=False, unique=False):
         nbins = num_unique
 
     results["count-bin"], bin_endpoints = pd.qcut(np.array(results["count"]), nbins, retbins=True, labels=False, precision=0, duplicates="drop")
-    print("Bin endpoints")
-    print(bin_endpoints)
+    # print("Bin endpoints")
+    # print(bin_endpoints)
     bin_labels = [str(int(bin_endpoints[i]+1))+"-"+str(int(bin_endpoints[i+1])) for i in range(len(bin_endpoints)-1)]
     results["count-range"] = np.array(bin_labels)[np.array(list(results["count-bin"])).astype(int)]
-    print(bin_labels)
+    # print(bin_labels)
     results["unique"] = unique
     results["coverage"] = (results["lower"] <= results["count"]).astype(float)
     results["length"] = results["upper"] - results["lower"] + 1
