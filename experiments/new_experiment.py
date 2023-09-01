@@ -18,7 +18,7 @@ PY_ALPHAS = [0.25]
 PY_THETAS = [10.0, 100.0]
 NDATA = 250000
 NTRAIN = 25000
-NTEST = 500
+NTEST = 2500
 NREP = 20
 
 NJOBS = 16
@@ -30,6 +30,7 @@ NJOBS = 16
 # NJOBS = 4
 
 np.random.seed(SEED)
+seeds = np.random.randint(10000, 1000000, size=NREP)
 
 
 def run_one(py_theta, py_alpha, method, model, J, rule, repnum):
@@ -44,7 +45,7 @@ def run_one(py_theta, py_alpha, method, model, J, rule, repnum):
 
 
     M = int(max_mem / J)
-    rep_seed = np.random.randint()
+    rep_seed = seeds[repnum]
     stream = PYP(py_theta, py_alpha, rep_seed)
     cms = CMS(M, J, seed=rep_seed, conservative=False)
     method_unique = 0
@@ -64,10 +65,11 @@ def run_one(py_theta, py_alpha, method, model, J, rule, repnum):
         method_name = method + "_" + rule
 
     
-    results = worker.run(NDATA, NTEST, seed=SEED)
-    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED) + "_repnum" + str(repnum)
+    results = worker.run(NDATA, NTEST, seed=rep_seed)
+    outfile_prefix = \
+        sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_repnum" + str(repnum)
     process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
-                    method, False, "mcmc", n_bins, n_track, NDATA, SEED, 0.9, False)
+                    method, False, "mcmc", n_bins, n_track, NDATA, rep_seed, 0.9, False)
     
 
 if __name__ == "__main__":
