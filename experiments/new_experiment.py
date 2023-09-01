@@ -31,8 +31,10 @@ NJOBS = 16
 
 np.random.seed(SEED)
 
+seeds = np.random.randint(100000, 1000000, size=NREP)
 
-def run_one(py_theta, py_alpha, method, model, J, rule, repnum):
+
+def run_one(py_theta, py_alpha, J, repnum):
     import os, sys
     sys.path.append("..")
 
@@ -44,31 +46,68 @@ def run_one(py_theta, py_alpha, method, model, J, rule, repnum):
 
 
     M = int(max_mem / J)
-    rep_seed = np.random.randint()
+    rep_seed = seeds[repnum]
     stream = PYP(py_theta, py_alpha, rep_seed)
     cms = CMS(M, J, seed=rep_seed, conservative=False)
     method_unique = 0
     n_bins = 1
     n_track = NTRAIN
     sketch_name = "cms"
-    if method == "conformal":
-        worker = ConformalCMS(stream, cms,
-                            n_track = NTRAIN,
-                            unique = 0,
-                            n_bins = 5,
-                            scorer_type = "Bayesian-" + model, agg_rule=rule)
-        method_name = method + "_" + rule
 
-    else:
-        worker = BayesianCMS(stream, cms, model=model, agg_rule=rule)
-        method_name = method + "_" + rule
+    # conformal PoE
+    print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}, REP: {6}".format(
+            py_theta, py_alpha, J, "conformal", "NGG", "PoE", repnum))
+    method = "conformal"
+    rule = "PoE"
+    conf_worker = ConformalCMS(
+        stream, cms, n_track = NTRAIN,
+        unique = 0, n_bins = 5, scorer_type = "Bayesian-" + model, 
+        agg_rule="PoE")
+    method_name = method + "_" + rule
+    results = conf_worker.run(NDATA, NTEST, seed=rep_seed)
+    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED) + "_repnum" + str(repnum)
+    process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
+                    method, False, "mcmc", n_bins, n_track, NDATA, rep_seed, 0.9, False)
 
+    # Bayes PoE
+    print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}, REP: {6}".format(
+            py_theta, py_alpha, J, "bayes", "NGG", "PoE", repnum))
+    method = "bayes"
+    rule = "PoE"
+    nggpoefit = conf_worker.model
+    bayes_worker = BayesianCMS(stream, cms, model="ngg", agg_rule="poe")
+    method_name = method + "_" + rule
+    bayes_worker.run(NDATA, NTEST, seed=rep_seed, fitted_model=nggpoefit)
+    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED) + "_repnum" + str(repnum)
+    process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
+                    method, False, "mcmc", n_bins, n_track, NDATA, rep_seed, 0.9, False)
+
+    # conformal min
+    print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}, REP: {6}".format(
+            py_theta, py_alpha, J, "conformal", "NGG", "min", repnum))
+    conf_worker.change_rule("min")
+    method = "conformal"
+    rule = "min"
+    method_name = method + "_" + rule
+    results = conf_worker.run(NDATA, NTEST, seed=rep_seed, 
+                         reuse_stream=True, reuse_model=True)
+    outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED) + "_repnum" + str(repnum)
+    process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
+                    method, False, "mcmc", n_bins, n_track, NDATA, rep_seed, 0.9, False)
     
-    results = worker.run(NDATA, NTEST, seed=SEED)
+    # Bayes min
+    print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}, REP: {6}".format(
+            py_theta, py_alpha, J, "bayes", "NGG", "min", repnum))
+    method = "bayes"
+    rule = "min"
+    nggminfit = conf_worker.model
+    bayes_worker = BayesianCMS(stream, cms, model="ngg", agg_rule="min")
+    method_name = method + "_" + rule
+    bayes_worker.run(NDATA, NTEST, seed=rep_seed, fitted_model=nggminfit)
     outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_s" + str(SEED) + "_repnum" + str(repnum)
     process_results(results, outfile_prefix, method_name, model, sketch_name, "PYP", M, J, 
                     method, False, "mcmc", n_bins, n_track, NDATA, SEED, 0.9, False)
-    
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -79,16 +118,10 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    methods = [args.method] if args.method else ["bayes", "conformal"]
     models = [args.model] if args.model else ["DP", "NGG"]
-    rules = [args.rule] if args.rule else ["PoE", "min"]
 
     for theta in PY_THETAS:
         for alpha in PY_ALPHAS:
-                for method in methods:
-                     for model in models:
-                        for rule in rules:
-                            for j in range(NREP):
-                                print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}, REP: {6}".format(
-                                    theta, alpha, args.J, method, model, rule, j))
-                                run_one(theta, alpha, method, model, args.J, rule, j)
+            for model in models:
+                for j in range(NREP):
+                    run_one(theta, alpha, model, args.J, j)
