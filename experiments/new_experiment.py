@@ -34,7 +34,7 @@ np.random.seed(SEED)
 seeds = np.random.randint(100000, 1000000, size=NREP)
 
 
-def run_one(py_theta, py_alpha, J, repnum):
+def run_one(py_theta, py_alpha, model, J, repnum):
     import os, sys
     sys.path.append("..")
 
@@ -56,7 +56,7 @@ def run_one(py_theta, py_alpha, J, repnum):
 
     # conformal PoE
     print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}, REP: {6}".format(
-            py_theta, py_alpha, J, "conformal", "NGG", "PoE", repnum))
+            py_theta, py_alpha, J, "conformal", model, "PoE", repnum))
     method = "conformal"
     rule = "PoE"
     conf_worker = ConformalCMS(
@@ -71,11 +71,11 @@ def run_one(py_theta, py_alpha, J, repnum):
 
     # Bayes PoE
     print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}, REP: {6}".format(
-            py_theta, py_alpha, J, "bayes", "NGG", "PoE", repnum))
+            py_theta, py_alpha, J, "bayes", model, "PoE", repnum))
     method = "bayes"
     rule = "PoE"
     nggpoefit = conf_worker.model
-    bayes_worker = BayesianCMS(stream, cms, model="ngg", agg_rule="poe")
+    bayes_worker = BayesianCMS(stream, cms, model=model, agg_rule="poe")
     method_name = method + "_" + rule
     bayes_worker.run(NDATA, NTEST, seed=rep_seed, fitted_model=nggpoefit)
     outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_repnum" + str(repnum)
@@ -84,7 +84,7 @@ def run_one(py_theta, py_alpha, J, repnum):
 
     # conformal min
     print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}, REP: {6}".format(
-            py_theta, py_alpha, J, "conformal", "NGG", "min", repnum))
+            py_theta, py_alpha, J, "conformal", model, "min", repnum))
     conf_worker.change_rule("min")
     method = "conformal"
     rule = "min"
@@ -97,11 +97,11 @@ def run_one(py_theta, py_alpha, J, repnum):
     
     # Bayes min
     print("Running PYP({0}, {1}), J: {2}, Method: {3}, Model: {4}, Rule: {5}, REP: {6}".format(
-            py_theta, py_alpha, J, "bayes", "NGG", "min", repnum))
+            py_theta, py_alpha, J, "bayes", model, "min", repnum))
     method = "bayes"
     rule = "min"
     nggminfit = conf_worker.model
-    bayes_worker = BayesianCMS(stream, cms, model="ngg", agg_rule="min")
+    bayes_worker = BayesianCMS(stream, cms, model=model, agg_rule="min")
     method_name = method + "_" + rule
     bayes_worker.run(NDATA, NTEST, seed=rep_seed, fitted_model=nggminfit)
     outfile_prefix = sketch_name + "_" + "PYP_" + str(py_theta) + "_" + str(py_alpha) + "_d" + str(M) + "_w" + str(J) + "_n" + str(NDATA) + "_repnum" + str(repnum)
