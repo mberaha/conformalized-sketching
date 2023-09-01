@@ -62,6 +62,10 @@ class ClassicalScores:
         upper = self.cms.estimate_count(x)
         lower = np.maximum(0, upper - tau).astype(int)
         return lower, upper
+    
+    @staticmethod
+    def name():
+        return "classical1s"
 
 class ClassicalScoresTwoSided:
     def __init__(self, cms, method="constant"):
@@ -84,6 +88,10 @@ class ClassicalScoresTwoSided:
         lower = np.maximum(0, lower - tau_l).astype(int)
         upper = np.maximum(lower, np.minimum(upper, upper + tau_u)).astype(int)
         return lower, upper
+    
+    @staticmethod
+    def name():
+        return "classical2s"
 
 class BayesianScores:
     def __init__(self, model, confidence):
@@ -91,6 +99,7 @@ class BayesianScores:
         self.cms = copy.deepcopy(model.cms)
         self.confidence = confidence
         self.t_seq = np.linspace(0, 1, 100)
+        self.score_cache = {}
 
     def _lower_bound(self, cdfi, t):
         lower = np.where(cdfi>=t)[0]
@@ -109,14 +118,17 @@ class BayesianScores:
         lower_seq[lower_seq<0] = 0
         return lower_seq
 
-    @lru_cache(maxsize=2048)
     def compute_score(self, x, y):
-        lower = self._compute_sequence(x)
-        idx_below = np.where(lower <= y)[0]
-        if len(idx_below)>0:
-            score = np.min(idx_below)
-        else:
-            score = len(lower)-1
+        score = self.score_cache.get((x, y), None)
+        if score is None:
+            lower = self._compute_sequence(x)
+            idx_below = np.where(lower <= y)[0]
+            if len(idx_below)>0:
+                score = np.min(idx_below)
+            else:
+                score = len(lower)-1
+
+            self.score_cachce[(x, y)] = score
 
         return score, 0
 
@@ -128,12 +140,17 @@ class BayesianScores:
         idx_above = np.where(cdfi>=tau-1e-6)[0]
         lower = len(posterior) - np.min(idx_above) - 1
         return lower, upper
+    
+    @staticmethod
+    def name():
+        return "bayes1s"
 
 class BayesianScoresTwoSided:
     def __init__(self, model, confidence):
         self.model = model
         self.confidence = confidence
         self.t_seq = np.linspace(0, 1, 100)
+        self.score_cache = {}
 
     def _lower_bound(self, cdfi, t):
         lower = np.where(cdfi>=t)[0]
@@ -143,13 +160,16 @@ class BayesianScoresTwoSided:
             lower = 0
         return lower
 
-    @lru_cache(maxsize=2048)
     def compute_score(self, x, y):
-        pdf = self.model.posterior(x)
-        pdf = pdf.reshape((1,len(pdf)))
-        breaks = np.arange(pdf.shape[1])
-        CHR = HistogramAccumulator(pdf, breaks, self.confidence, delta_alpha=0.01)
-        score = CHR.calibrate_intervals(y)
+        score = self.score_cache.get((x, y), None)
+        if score is None:
+            pdf = self.model.posterior(x)
+            pdf = pdf.reshape((1,len(pdf)))
+            breaks = np.arange(pdf.shape[1])
+            CHR = HistogramAccumulator(pdf, breaks, self.confidence, delta_alpha=0.01)
+            score = CHR.calibrate_intervals(y)
+            self.score_cache[(x, y)] = score
+    
         return score, 0
 
     def predict_interval(self, x, t, t_u):
@@ -159,6 +179,10 @@ class BayesianScoresTwoSided:
         CHR = HistogramAccumulator(pdf, breaks, self.confidence, delta_alpha=0.01)
         S = CHR.predict_intervals(1.0-t)
         return S.flatten().astype(int)
+    
+    @staticmethod
+    def name():
+        return "bayes2s"
 
 class BootstrapScores:
     def __init__(self, cms, alpha):
@@ -198,6 +222,10 @@ class BootstrapScores:
         upper = upper_max
         lower = np.maximum(0, lower - tau_l).astype(int)
         return lower, upper
+    
+    @staticmethod
+    def name():
+        return "bootstrap1s"
 
 
 class BootstrapScoresTwoSided:
@@ -244,6 +272,10 @@ class BootstrapScoresTwoSided:
         lower = np.maximum(0, lower - tau_l).astype(int)
         upper = np.maximum(lower, np.minimum(upper, upper + tau_u)).astype(int)
         return lower, upper
+    
+    @staticmethod
+    def name():
+        return "bootstrap2s"
 
 
 class BootstrapScoresTwoSidedCHR:
@@ -299,6 +331,10 @@ class BootstrapScoresTwoSidedCHR:
         upper = np.minimum(upper_max, upper)
         S = np.array([lower,upper])
         return S.astype(int)
+    
+    @staticmethod
+    def name():
+        return "bootstrap2schr"
 
 
 class ConformalCMS:
@@ -313,28 +349,43 @@ class ConformalCMS:
         self.two_sided = two_sided
         self.agg_rule = agg_rule
         self.model = None
+        self.interval_cache = {}
 
-    @lru_cache(maxsize=2048)
     def _predict_interval(self, x, scorer=None, t_hat_low=None, t_hat_upp=None):
-        lower_warmup = self.cms_warmup.true_count[x]
-        if scorer is not None:
-            lower, upper = scorer.predict_interval(x, t_hat_low, t_hat_upp)
-            if hasattr(lower, "__len__"):
-                lower = lower[0]
-                upper = upper[0]
-            lower = np.maximum(0, lower)
-        else:
+        def get_key():
+            return (scorer.name(), t_hat_low, t_hat_upp)
+
+        if scorer is None:
             lower = 0
             upper = self.cms.estimate_count(x)
+            lower_warmup = self.cms_warmup.true_count[x]
+            return lower + lower_warmup, upper + lower_warmup
+        
+        cache_key = get_key()
+        out = self.interval_cache.get(cache_key, None)
+        if out is None:
+            lower_warmup = self.cms_warmup.true_count[x]
+            if scorer is not None:
+                lower, upper = scorer.predict_interval(x, t_hat_low, t_hat_upp)
+                if hasattr(lower, "__len__"):
+                    lower = lower[0]
+                    upper = upper[0]
+                lower = np.maximum(0, lower)
+            else:
+                lower = 0
+                upper = self.cms.estimate_count(x)
 
-        return lower + lower_warmup, upper + lower_warmup
+            out = lower + lower_warmup, upper + lower_warmup
+            self.interval_cache[cache_key] = out
+
+        return out
     
     def change_rule(self, new_rule):
         if self.model is None:
             raise RuntimeError("chane_rule can be called only after run")
         
         self.model.rule = new_rule
-        self._predict_interval.cache_clear()
+        self.interval_cache = {}
 
     def warmup(self):
         ## Warmup

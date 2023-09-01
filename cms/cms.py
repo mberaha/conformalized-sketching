@@ -311,6 +311,7 @@ class SmoothedNGG(BNPCMS):
         self.train_data = train_data
         self.rule = agg_rule
         self.C = self.cms.count
+        self.posterior_cache = {}
     
     def empirical_bayes(self):
         self.params = Sketch.fit_ngg(self.train_data)
@@ -321,15 +322,18 @@ class SmoothedNGG(BNPCMS):
         Main.J = self.cms.w
         return self.params
 
-    @lru_cache(maxsize=2048)
     def get_posteriors(self, x):
-        columns = self.cms.apply_hash(x)
-        c_js = [self.C[row,columns[row]] for row in range(self.C.shape[0])]
-        Main.c_js = [int(c) for c in c_js]
-        Main.min_c = int(np.min(c_js))
+        logprobas = self.posterior_cache.get(x, None)
+        if logprobas is None:
+            columns = self.cms.apply_hash(x)
+            c_js = [self.C[row,columns[row]] for row in range(self.C.shape[0])]
+            Main.c_js = [int(c) for c in c_js]
+            Main.min_c = int(np.min(c_js))
 
-        logprobas = Main.eval(
-            "[Sketch.freq_post!(min_c, c, ngg_p, J, true, ngg_intcache) for c in c_js]")
+            logprobas = Main.eval(
+                "[Sketch.freq_post!(min_c, c, ngg_p, J, true, ngg_intcache) for c in c_js]")
+            self.posterior_cache[x] = logprobas
+    
         return logprobas
 
     def posterior(self, x):  
