@@ -323,25 +323,24 @@ class SmoothedNGG(BNPCMS):
         return self.params
 
     def get_posteriors(self, x):
-        logprobas = self.posterior_cache.get(x, None)
-        if logprobas is None:
-            columns = self.cms.apply_hash(x)
-            c_js = [self.C[row,columns[row]] for row in range(self.C.shape[0])]
-            Main.c_js = [int(c) for c in c_js]
-            Main.min_c = int(np.min(c_js))
+        columns = self.cms.apply_hash(x)
+        c_js = [self.C[row,columns[row]] for row in range(self.C.shape[0])]
+        Main.c_js = [int(c) for c in c_js]
+        Main.min_c = int(np.min(c_js))
 
-            logprobas = Main.eval(
-                "[Sketch.freq_post!(min_c, c, ngg_p, J, true, ngg_intcache) for c in c_js]")
-            self.posterior_cache[x] = logprobas
-    
+        logprobas = Main.eval(
+            "[Sketch.freq_post!(min_c, c, ngg_p, J, true, ngg_intcache) for c in c_js]")    
         return logprobas
 
     def posterior(self, x):  
-        logprobas = self.get_posteriors(x)
-        if self.rule == "min":
-            out = Sketch.MIN(logprobas)
-        else:
-            out = Sketch.PoE(logprobas)
+        out = self.posterior_cache.get(x, None)
+        if out is None:
+            logprobas = self.get_posteriors(x)
+            if self.rule == "min":
+                out = Sketch.MIN(logprobas)
+            else:
+                out = Sketch.PoE(logprobas)
+            self.posterior_cache[x] = out
         return out
     
 

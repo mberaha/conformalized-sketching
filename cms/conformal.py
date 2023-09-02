@@ -128,7 +128,7 @@ class BayesianScores:
             else:
                 score = len(lower)-1
 
-            self.score_cachce[(x, y)] = score
+            self.score_cache[(x, y)] = score
 
         return score, 0
 
