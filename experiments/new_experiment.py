@@ -81,8 +81,8 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    methods = [args.method] if args.method else ["bayes", "conformal"]
-    models = [args.model] if args.model else ["DP", "NGG"]
+    methods = [args.method] if args.method else ["conformal", "bayes"]
+    models = [args.model] if args.model else ["NGG", "DP"]
     rules = [args.rule] if args.rule else ["PoE", "min"]
 
     for theta in PY_THETAS:
