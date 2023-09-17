@@ -1,0 +1,9 @@
+matplotlib
+methodtools
+mmh3
+numpy
+pandas
+pdb
+scikit-learn
+scipy
+tqdm
