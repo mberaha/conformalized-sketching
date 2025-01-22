@@ -4,3 +4,15 @@ requires = [
   "wheel",
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "cms"
+description = "Count-Min Sketcing"
+requires-python = ">=3.9"
+dynamic = ["version"]
+readme = {file = "README.md", content-type = "text/markdown"}
+authors = [
+    {name = "Matteo Sesia, Mario Beraha", email = "berahamario@gmail.com"}
+]
+dependencies = [
+]
