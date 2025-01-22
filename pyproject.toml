@@ -14,7 +14,8 @@ readme = {file = "README.md", content-type = "text/markdown"}
 authors = [
     {name = "Matteo Sesia, Mario Beraha", email = "berahamario@gmail.com"}
 ]
-dependencies = [ 
+dependencies = [
+  "pyjulia>=0.6.1", 
   "matplotlib>=3.7.1",
   "methodtools>=0.4.7",
   "mmh3>=3.0.0",
